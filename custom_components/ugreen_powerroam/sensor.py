@@ -22,6 +22,7 @@ async def async_setup_entry(
     # is left with permanently unavailable entities.
     keys = SENSORS if data["transport"] != TRANSPORT_BLE else BLE_SENSORS
     async_add_entities(UgreenSensor(api, hub, key) for key in SENSORS if key in keys)
+    async_add_entities([UgreenCellImbalanceSensor(api, hub)])
 
 
 class UgreenSensor(SensorEntity):
@@ -40,6 +41,8 @@ class UgreenSensor(SensorEntity):
         )
         self._attr_icon = icon
         unique_key = key
+        if key.startswith("cell_voltage_"):
+            self._attr_suggested_display_precision = 3
         if key in SUGGESTED_HOURS:
             self._attr_suggested_unit_of_measurement = "h"
             self._attr_suggested_display_precision = 1
@@ -69,3 +72,32 @@ class UgreenSensor(SensorEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         self._remove_listener()
+
+
+class UgreenCellImbalanceSensor(UgreenSensor):
+    """Derived: spread between the highest and lowest cell voltage (mV)."""
+
+    _CELL_KEYS = tuple(f"cell_voltage_{n}" for n in range(1, 8))
+
+    def __init__(self, api, hub) -> None:
+        super().__init__(api, hub, "cell_voltage_1")
+        self._key = "cell_imbalance"
+        self._attr_name = "Cell Imbalance"
+        self._attr_icon = "mdi:scale-unbalanced"
+        self._attr_unique_id = f"{api.unique_id_base}_cell_imbalance"
+
+    def _cells(self) -> list[float]:
+        return [
+            v
+            for k in self._CELL_KEYS
+            if isinstance(v := self._hub.data.get(k), (int, float))
+        ]
+
+    @property
+    def native_value(self):
+        cells = self._cells()
+        return round(max(cells) - min(cells), 1) if len(cells) > 1 else None
+
+    @property
+    def available(self) -> bool:
+        return self._hub.available and len(self._cells()) > 1

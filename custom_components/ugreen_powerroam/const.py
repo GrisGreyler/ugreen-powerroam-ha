@@ -181,7 +181,7 @@ SENSORS = {
     **{
         f"cell_voltage_{n}": (
             f"Cell {n} Voltage",
-            "mV",
+            "V",
             "voltage",
             "measurement",
             "diagnostic",

@@ -347,6 +347,10 @@ class UgreenTelemetryHub:
                                 msg.data,
                             )
                         new = {k: v for k, v in payload.items() if v is not None}
+                        for _n in range(1, 8):
+                            _cv = new.get(f"cell{_n}_vol")
+                            if _cv is not None:
+                                new[f"cell_voltage_{_n}"] = round(_cv / 1000, 3)
                         pending = self.__dict__.setdefault("_pending", {})
                         held = False
                         for key in (
