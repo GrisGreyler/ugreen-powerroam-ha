@@ -83,6 +83,9 @@ class UgreenCellImbalanceSensor(UgreenSensor):
         super().__init__(api, hub, "cell_voltage_1")
         self._key = "cell_imbalance"
         self._attr_name = "Cell Imbalance"
+        self._attr_device_class = None
+        self._attr_native_unit_of_measurement = "mV"
+        self._attr_suggested_display_precision = 0
         self._attr_icon = "mdi:scale-unbalanced"
         self._attr_unique_id = f"{api.unique_id_base}_cell_imbalance"
 
@@ -96,7 +99,13 @@ class UgreenCellImbalanceSensor(UgreenSensor):
     @property
     def native_value(self):
         cells = self._cells()
-        return round(max(cells) - min(cells), 1) if len(cells) > 1 else None
+        if len(cells) < 2:
+            return None
+        spread = max(cells) - min(cells)
+        # values in volts (e.g. 3.341) -> convert to mV
+        if max(cells) < 10:
+            spread *= 1000
+        return round(spread)
 
     @property
     def available(self) -> bool:
