@@ -2,11 +2,11 @@ name: Gemini Auto Coder
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
 
 jobs:
   gemini-fix:
-    if: contains(github.event.issue.labels.*.name, 'gemini') || github.event.action == 'opened'
+    if: github.event.label.name == 'gemini' && github.actor == 'GrisGreyler'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,6 +44,8 @@ jobs:
           git diff --quiet && { echo "Aider made no changes"; exit 1; }
 
       - name: Commit and Push changes
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           git config --global user.name "Gemini Bot"
           git config --global user.email "gemini-bot@github.com"
@@ -51,6 +53,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Auto-fix by Gemini: ${{ github.event.issue.title }}"
+            git commit -m "Auto-fix by Gemini: $ISSUE_TITLE"
             git push
           fi
