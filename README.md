@@ -42,6 +42,7 @@ transport in HA does not do that by itself.
 | Battery Temperature 1/2, Inverter Temperature 1/2 | `sensor` | °C, diagnostic |
 | Work Mode | `sensor` | raw numeric mode, meaning unconfirmed |
 | Cell 1-7 Voltage | `sensor` | mV, diagnostic |
+| Cell Imbalance | `sensor` | mV, diagnostic; max − min of Cell 1-7 Voltage (derived, both transports) |
 | AC Input / AC Output / DC Voltage, Fault Code | `sensor` | cloud only, see [Known gaps](#known-gaps) |
 
 Entities are created only for fields the chosen transport can fill (`BLE_SENSORS` in
@@ -49,6 +50,12 @@ Entities are created only for fields the chosen transport can fill (`BLE_SENSORS
 
 The cloud server reports per-cell voltages too (`cell1_vol` ... `cell7_vol`, plus
 `cell_total_vol`); this is not a Bluetooth-only feature.
+
+From these values the integration computes a **Cell Imbalance** sensor: the spread
+between the highest and lowest cell voltage in mV. It works over both Bluetooth and
+cloud and goes unavailable when fewer than two cell readings are present. A healthy
+LiFePO4 pack typically stays within a few mV at rest; the value grows toward the
+ends of charge/discharge.
 
 ## Install
 
