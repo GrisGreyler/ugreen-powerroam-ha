@@ -4,6 +4,10 @@ Home Assistant integration for UGREEN power stations that use the **UGREEN app**
 (`com.powerroam.pps`). Fork of [tanka8/ugreen-powerroam](https://github.com/tanka8/ugreen-powerroam)
 (MIT), developed against a **PowerRoam 1200W**.
 
+> **Fully vibe-coded fork, provided as is.** The code is written with AI assistance
+> and has not been audited. There is no warranty, and no promise of future updates,
+> bug fixes or support. Use at your own risk.
+
 > **Tested on one model, one account.** Other PowerRoam models probably share the
 > same cloud API and field names, but that is an assumption.
 
