@@ -108,7 +108,7 @@ SENSORS = {
     ),
     "discharge_remain_time": (
         "Discharge Time Remaining",
-        "s",
+        "min",
         "duration",
         "measurement",
         None,
@@ -116,7 +116,7 @@ SENSORS = {
     ),
     "charge_remain_time": (
         "Charge Time Remaining",
-        "s",
+        "min",
         "duration",
         "measurement",
         None,
@@ -219,7 +219,7 @@ BLE_SENSORS = {
 # They are one of the things local Bluetooth buys you.
 BLE_ONLY_SENSORS = {f"cell_voltage_{n}" for n in range(1, 8)}
 
-# Raw values for these keys come from the API in seconds. native stays in
-# seconds (so history/statistics don't break); suggested_unit_of_measurement
+# Raw values for these keys come from the API in minutes. native stays in
+# minutes (so history/statistics don't break); suggested_unit_of_measurement
 # tells HA's frontend to display and store new stats in hours instead.
 SUGGESTED_HOURS = {"discharge_remain_time", "charge_remain_time"}
