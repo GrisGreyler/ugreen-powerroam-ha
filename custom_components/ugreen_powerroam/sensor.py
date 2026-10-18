@@ -61,7 +61,12 @@ class UgreenSensor(SensorEntity):
 
     @property
     def native_value(self):
-        return self._hub.data.get(self._key)
+        data = self._hub.data
+        if self._key == "discharge_remain_time" and not data.get("discharge_pow"):
+            return None
+        if self._key == "charge_remain_time" and not data.get("charge_power_all"):
+            return None
+        return data.get(self._key)
 
     @property
     def available(self) -> bool:
