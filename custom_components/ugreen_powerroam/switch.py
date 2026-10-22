@@ -7,17 +7,21 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN, SWITCHES
+from .keep_state import KEEP_TARGETS
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     data = hass.data[DOMAIN][entry.entry_id]
-    api, hub = data["api"], data["hub"]
+    api, hub, keep = data["api"], data["hub"], data["keep"]
 
-    async_add_entities(UgreenSwitch(api, hub, key) for key in SWITCHES)
+    entities: list[SwitchEntity] = [UgreenSwitch(api, hub, key) for key in SWITCHES]
+    entities.extend(UgreenKeepSwitch(api, keep, key) for key in KEEP_TARGETS)
+    async_add_entities(entities)
 
 
 class UgreenSwitch(SwitchEntity):
@@ -59,6 +63,44 @@ class UgreenSwitch(SwitchEntity):
 
     async def async_added_to_hass(self) -> None:
         self._remove_listener = self._hub.add_listener(self.async_write_ha_state)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._remove_listener()
+
+
+class UgreenKeepSwitch(SwitchEntity, RestoreEntity):
+    """Toggles one keep-state watchdog; state survives HA restarts."""
+
+    _attr_should_poll = False
+    _attr_icon = "mdi:lock"
+
+    def __init__(self, api, keep, key: str) -> None:
+        self._keep = keep
+        self._key = key
+        self._attr_name = KEEP_TARGETS[key][0]
+        self._attr_unique_id = f"{api.unique_id_base}_keep_{key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, api.unique_id_base)},
+            name="UGREEN PowerRoam",
+            manufacturer="UGREEN",
+            model=api.device_name,
+            serial_number=api.sn,
+        )
+
+    @property
+    def is_on(self) -> bool:
+        return self._keep.is_enabled(self._key)
+
+    async def async_turn_on(self, **kwargs) -> None:
+        self._keep.set_enabled(self._key, True)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        self._keep.set_enabled(self._key, False)
+
+    async def async_added_to_hass(self) -> None:
+        self._remove_listener = self._keep.add_listener(self.async_write_ha_state)
+        if (last := await self.async_get_last_state()) is not None:
+            self._keep.set_enabled(self._key, last.state == "on")
 
     async def async_will_remove_from_hass(self) -> None:
         self._remove_listener()

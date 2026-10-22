@@ -20,6 +20,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import UgreenApiClient, UgreenAuthError, UgreenTelemetryHub
+from .keep_state import KeepState
 from .const import (
     CONF_ADDRESS,
     CONF_DEVICE_NAME,
@@ -50,6 +51,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hub = UgreenTelemetryHub(api, session)
         await hub.start()
         data = {"api": api, "hub": hub, "transport": TRANSPORT_CLOUD}
+
+    keep = KeepState(hass, data["hub"], data["api"])
+    keep.start()
+    data["keep"] = keep
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = data
 
@@ -88,5 +93,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         data = hass.data[DOMAIN].pop(entry.entry_id)
+        await data["keep"].stop()
         await data["hub"].stop()
     return unload_ok
