@@ -20,7 +20,6 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import UgreenApiClient, UgreenAuthError, UgreenTelemetryHub
-from .keep_state import KeepState
 from .const import (
     CONF_ADDRESS,
     CONF_DEVICE_NAME,
@@ -30,6 +29,7 @@ from .const import (
     TRANSPORT_BLE,
     TRANSPORT_CLOUD,
 )
+from .keep_state import KeepState
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 

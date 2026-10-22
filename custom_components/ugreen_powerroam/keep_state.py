@@ -123,7 +123,7 @@ class KeepState:
                 await self._api.set_device_info(key, want)
             except asyncio.CancelledError:
                 raise
-            except Exception as err:  # noqa: BLE001 - transport errors vary
+            except Exception as err:
                 _LOGGER.warning("Keep %s: command failed: %s", key, err)
             for _ in range(max(1, round(CONFIRM_TIMEOUT / POLL_STEP))):
                 await asyncio.sleep(POLL_STEP)
