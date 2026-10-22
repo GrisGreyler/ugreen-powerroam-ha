@@ -21,10 +21,12 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 # telemetry key -> (switch name, wanted raw value)
+# The device page lists entities alphabetically by name, so each name starts
+# with the name of the control it holds - that puts it right below it.
 KEEP_TARGETS: dict[str, tuple[str, int]] = {
-    "switch_ac": ("Keep AC On", 1),
-    "usb_sw": ("Keep USB On", 1),
-    "work_mode": ("Keep Always On Mode", 3),
+    "switch_ac": ("AC Output Keep On", 1),
+    "usb_sw": ("USB Output Keep On", 1),
+    "work_mode": ("Always On Mode Keep On", 3),
 }
 
 SETTLE_DELAY = 5  # let a rebooted unit finish publishing its state first
