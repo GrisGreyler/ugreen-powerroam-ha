@@ -156,7 +156,12 @@ class TestTelemetry:
             protocol.encode(protocol.OP_SWITCHES, REAL_SWITCH_STATE)
         )
         out = protocol.telemetry_from_frame(frame)
-        assert out == {"switch_ac": 0, "switch_dc": 0, "usb_sw": 1}
+        assert out == {
+            "switch_ac": 0,
+            "switch_dc": 0,
+            "usb_sw": 1,
+            "bat_health_set": 1,
+        }
 
     def test_port_powers_are_summed_for_usb(self) -> None:
         data = bytes.fromhex("0100020003000400" + "0500" + "0000000000")
