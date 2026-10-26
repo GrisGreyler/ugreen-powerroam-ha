@@ -77,7 +77,7 @@ SWITCHES = {
     # Battery Preservation Mode (the app's name). On = charge held back to
     # protect the cells (~90 %); off = full charge to 100 %. Read key is
     # bat_health_set; the cloud write key is assumed to be the same - unconfirmed.
-    "bat_health_set": "Battery Preservation Mode",
+    "bat_health_set": "Battery Preservation Mode (90%)",
 }
 
 # Sensor entities: key -> (name, unit, device_class, state_class, entity_category, icon)
