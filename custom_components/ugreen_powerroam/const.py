@@ -74,6 +74,10 @@ SWITCHES = {
     "switch_dc": "DC Output",
     "usb_sw": "USB Output",
     "lamp_sw": "Flashlight",
+    # Battery Preservation Mode (the app's name). On = charge held back to
+    # protect the cells (~90 %); off = full charge to 100 %. Read key is
+    # bat_health_set; the cloud write key is assumed to be the same - unconfirmed.
+    "bat_health_set": "Battery Preservation Mode",
 }
 
 # Sensor entities: key -> (name, unit, device_class, state_class, entity_category, icon)

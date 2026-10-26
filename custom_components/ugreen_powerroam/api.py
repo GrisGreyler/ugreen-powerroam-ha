@@ -322,6 +322,7 @@ class UgreenTelemetryHub:
                             "switch_all",
                             "switch_conpower",
                             "lamp_sw",
+                            "bat_health_set",
                         ):
                             if _k in payload and payload[_k] != prev.get(_k):
                                 _LOGGER.debug(
@@ -359,6 +360,7 @@ class UgreenTelemetryHub:
                             "switch_ac",
                             "switch_dc",
                             "lamp_sw",
+                            "bat_health_set",
                         ):
                             if key in new and key in prev and new[key] != prev[key]:
                                 cand = pending.get(key)

@@ -386,6 +386,8 @@ def telemetry_from_frame(frame: Frame) -> dict[str, int | bool]:
             out["switch_dc"] = 1 if state["dc"] else 0
         if "usb" in state:
             out["usb_sw"] = 1 if state["usb"] else 0
+        if "battery_health" in state:
+            out["bat_health_set"] = 1 if state["battery_health"] else 0
 
     return out
 

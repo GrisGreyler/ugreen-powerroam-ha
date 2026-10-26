@@ -56,6 +56,7 @@ SWITCH_KEY_TO_FIELD = {
     "switch_ac": "ac",
     "switch_dc": "dc",
     "usb_sw": "usb",
+    "bat_health_set": "battery_health",
 }
 
 # A notification buffer should never grow past a couple of frames. If it does,
