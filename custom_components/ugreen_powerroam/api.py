@@ -162,17 +162,29 @@ class UgreenApiClient:
         self.sn = device.get("sn")
 
     async def set_device_info(self, key: str, value: int) -> None:
-        """Send one control command, e.g. set_device_info('switch_ac', 1)."""
+        """Send one control command, e.g. set_device_info('switch_ac', 1).
+
+        The token is invalidated whenever the same account logs in elsewhere
+        (e.g. the phone app); the API then answers code 403 ("login expired").
+        Re-login once and retry before giving up.
+        """
         body = {"deviceName": self.device_name, "map": {key: value}}
-        async with self._session.post(
-            f"{API_BASE}/app/v1/device/setDeviceInfo",
-            json=body,
-            headers=self._headers(),
-        ) as resp:
-            result = await resp.json(content_type=None)
-        _LOGGER.debug("setDeviceInfo %s=%s -> %s", key, value, result)
-        if result.get("errcode") != 200:
-            raise UgreenApiError(f"setDeviceInfo({key}={value}) failed: {result}")
+        for attempt in (1, 2):
+            async with self._session.post(
+                f"{API_BASE}/app/v1/device/setDeviceInfo",
+                json=body,
+                headers=self._headers(),
+            ) as resp:
+                result = await resp.json(content_type=None)
+            _LOGGER.debug("setDeviceInfo %s=%s -> %s", key, value, result)
+            if result.get("errcode") == 200:
+                return
+            if attempt == 1 and result.get("code", result.get("errcode")) == 403:
+                _LOGGER.debug("setDeviceInfo got 403, re-login and retry")
+                await self.relogin()
+                continue
+            break
+        raise UgreenApiError(f"setDeviceInfo({key}={value}) failed: {result}")
 
     async def relogin(self) -> None:
         """Re-run login with the stored credentials (e.g. after a token expiry)."""
