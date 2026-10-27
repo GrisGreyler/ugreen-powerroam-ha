@@ -131,8 +131,8 @@ class TestTelemetry:
         out = protocol.telemetry_from_frame(frame)
         assert out["battery_percentage"] == 88
         assert out["charge_remain_time"] == 0
-        assert out["cell_voltage_1"] == 3279
-        assert out["cell_voltage_7"] == 3279
+        assert out["cell_voltage_1"] == 3.279
+        assert out["cell_voltage_7"] == 3.279
         # Seven cells, and no eighth invented from the bytes that follow.
         assert "cell_voltage_8" not in out
 
