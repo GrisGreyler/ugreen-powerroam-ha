@@ -234,10 +234,6 @@ timing, `usb_sw` / `work_mode` / switch transitions and raw frames.
 
 ## Development
 
-- Issues in this repository can be picked up by a GitHub Actions workflow
-  (`.github/workflows/gemini-coder.yml`): a new issue, or the `gemini` label, runs
-  Aider with Gemini on the issue text and commits the result straight to `main`.
-  Review the diff after it runs.
 - Tests: `pip install pytest aiohttp cryptography && python -m pytest -v` (BLE codec,
   frame parser, RSA login; no network or hardware). `tests_ha/` runs the config flow
   inside Home Assistant (Linux/macOS only, CI runs it). CI also runs `ruff`, `hassfest`
