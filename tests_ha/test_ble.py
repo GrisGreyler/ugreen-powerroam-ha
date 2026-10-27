@@ -409,3 +409,14 @@ async def test_stop_is_safe_before_start(device) -> None:
     await device.stop()
 
     assert device.available is False
+
+
+def test_cell_voltages_are_reported_in_volts(device) -> None:
+    """The wire carries millivolts; entities and the cloud transport use volts."""
+    cells = [3279, 3280, 3280, 3277, 3280, 3277, 3280]
+    data = b"\x00\x00" + b"".join(c.to_bytes(2, "little") for c in cells)
+    device._on_notify(None, bytearray(device_frame(protocol.OP_BATTERY, data)))
+
+    assert device.data["cell_voltage_1"] == 3.279
+    assert device.data["cell_voltage_4"] == 3.277
+    assert device.data["cell_voltage_7"] == 3.28

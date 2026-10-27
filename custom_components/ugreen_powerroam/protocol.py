@@ -267,6 +267,7 @@ def encode_light(level: int) -> bytes:
 # handler ignores these bytes entirely. Seven consecutive little-endian uint16s
 # reading 3276-3280 identify them as per-cell millivolts of a 7-cell LiFePO4
 # pack about as conclusively as an observation can. Treated as diagnostic.
+# Reported in volts (mV / 1000, 3 decimals) to match the cloud transport.
 CELL_VOLTAGE_COUNT = 7
 CELL_VOLTAGE_OFFSET = 2
 
@@ -343,7 +344,7 @@ def telemetry_from_frame(frame: Frame) -> dict[str, int | bool]:
             millivolts = u16(data, CELL_VOLTAGE_OFFSET + cell * 2)
             if millivolts is None:
                 break
-            out[f"cell_voltage_{cell + 1}"] = millivolts
+            out[f"cell_voltage_{cell + 1}"] = round(millivolts / 1000, 3)
 
     elif frame.cmd == OP_TOTALS:
         input_power = u16(data, 0)
