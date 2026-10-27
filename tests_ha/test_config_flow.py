@@ -225,7 +225,9 @@ async def test_bluetooth_ignores_non_powerroam_devices(hass):
 
 
 async def test_bluetooth_duplicate_address_aborts(hass):
-    MockConfigEntry(domain=DOMAIN, data={}, unique_id=f"ble_{BLE_ADDRESS}").add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN, data={}, unique_id=f"ble_{BLE_ADDRESS}").add_to_hass(
+        hass
+    )
 
     with patch(DISCOVERED, return_value=[_FakeServiceInfo(BLE_ADDRESS, BLE_NAME)]):
         result = await _pick_bluetooth(hass)
