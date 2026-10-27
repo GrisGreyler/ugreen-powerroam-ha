@@ -158,7 +158,7 @@ async def _pick_bluetooth(hass):
 
 
 async def test_bluetooth_flow_creates_entry_with_serial(hass):
-    """A reachable unit lends its serial to the entry, matching the cloud id."""
+    """A reachable unit lends its serial to the entry, under its own id so it can coexist with a cloud entry."""
     with patch(DISCOVERED, return_value=[_FakeServiceInfo(BLE_ADDRESS, BLE_NAME)]):
         result = await _pick_bluetooth(hass)
         assert result["type"] is FlowResultType.FORM
@@ -225,7 +225,7 @@ async def test_bluetooth_ignores_non_powerroam_devices(hass):
 
 
 async def test_bluetooth_duplicate_address_aborts(hass):
-    MockConfigEntry(domain=DOMAIN, data={}, unique_id=BLE_ADDRESS).add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN, data={}, unique_id=f"ble_{BLE_ADDRESS}").add_to_hass(hass)
 
     with patch(DISCOVERED, return_value=[_FakeServiceInfo(BLE_ADDRESS, BLE_NAME)]):
         result = await _pick_bluetooth(hass)
@@ -233,3 +233,25 @@ async def test_bluetooth_duplicate_address_aborts(hass):
     # Already-configured devices are filtered out of the picker entirely.
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
+
+
+async def test_bluetooth_flow_coexists_with_cloud_entry(hass):
+    """A cloud entry for the same unit must not block the Bluetooth entry."""
+    MockConfigEntry(domain=DOMAIN, data={}, unique_id=BLE_SERIAL).add_to_hass(hass)
+
+    with patch(DISCOVERED, return_value=[_FakeServiceInfo(BLE_ADDRESS, BLE_NAME)]):
+        result = await _pick_bluetooth(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"address": BLE_ADDRESS}
+        )
+
+    with (
+        patch(PROBE, return_value=BLE_SERIAL),
+        patch(
+            "custom_components.ugreen_powerroam.async_setup_entry", return_value=True
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["result"].unique_id == f"ble_{BLE_ADDRESS}"

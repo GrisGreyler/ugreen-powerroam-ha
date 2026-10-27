@@ -127,13 +127,13 @@ def totals_frame(input_power: int, output_power: int) -> bytes:
 def test_unique_id_base_prefers_the_serial(hass_stub) -> None:
     device = UgreenBleDevice(hass_stub, ADDRESS, sn=IOT_SERIAL)
 
-    assert device.unique_id_base == IOT_SERIAL
+    assert device.unique_id_base == f"ble_{IOT_SERIAL}"
 
 
 def test_unique_id_base_falls_back_to_the_address(hass_stub) -> None:
     device = UgreenBleDevice(hass_stub, ADDRESS)
 
-    assert device.unique_id_base == ADDRESS
+    assert device.unique_id_base == f"ble_{ADDRESS}"
     assert device.device_name == ADDRESS
 
 
@@ -146,7 +146,7 @@ def test_learning_a_serial_later_does_not_move_the_unique_id(hass_stub) -> None:
     device._on_notify(None, bytearray(device_frame(protocol.CMD_GET_SERIAL, payload)))
 
     assert device.sn == IOT_SERIAL
-    assert device.unique_id_base == ADDRESS
+    assert device.unique_id_base == f"ble_{ADDRESS}"
 
 
 def test_serial_learned_on_the_wire_is_the_one_the_cloud_uses(hass_stub) -> None:

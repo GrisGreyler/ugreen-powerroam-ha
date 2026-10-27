@@ -112,7 +112,7 @@ class UgreenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered = {
             info.address: info.name or info.address
             for info in bluetooth.async_discovered_service_info(self.hass, False)
-            if _is_powerroam(info.name) and info.address not in current
+            if _is_powerroam(info.name) and f"ble_{info.address}" not in current
         }
         if not self._discovered:
             return self.async_abort(reason="no_devices_found")

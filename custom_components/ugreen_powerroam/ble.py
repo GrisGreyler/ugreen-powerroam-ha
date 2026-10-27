@@ -92,7 +92,9 @@ class UgreenBleDevice:
 
         # Fixed at setup from the config entry, never from a serial learned
         # later on the wire: if this moved, every entity would be re-registered
-        # under a new id after a restart and lose its history.
+        # under a new id after a restart and lose its history. The "ble_"
+        # prefix keeps it distinct from the cloud entry's ids so both
+        # transports can be configured for the same unit.
         self._unique_id_base = f"ble_{sn or address}"
 
         self.data: dict = {}
