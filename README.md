@@ -21,11 +21,10 @@ Chosen at setup:
 | Update rate | every ~0.6 s (written to HA at most every 2 s) | bursts of 3 identical frames every ~3.1 s, then a ~15.5 s pause |
 | Range | Bluetooth range of the HA host (or a proxy) | anywhere |
 | UGREEN app at the same time | **no**: the unit accepts one BLE connection | yes |
-| Entity identity | serial number | serial number (same) |
+| Entity identity | `ble_<MAC>` | serial number |
 
-Both entries use the same serial as identity, so you can switch transport and keep
-entity history: remove the old entry, add the new one. Two entries for one unit cannot
-coexist (deliberate).
+A Bluetooth entry and a cloud entry for the same unit can be active at the same time,
+see [Both transports at once](#both-transports-at-once).
 
 The unit has no local IP control path: a full TCP scan of all 65535 ports found nothing
 open. It only holds an outbound WiFi connection to `hw-powerapi.ugpps.com`. Local
@@ -45,7 +44,7 @@ transport in HA does not do that by itself.
 | Total / AC / DC / USB Output Power, Input Power | `sensor` | W |
 | Battery Temperature 1/2, Inverter Temperature 1/2 | `sensor` | °C, diagnostic |
 | Work Mode | `sensor` | raw numeric mode, meaning unconfirmed |
-| Cell 1-7 Voltage | `sensor` | mV, diagnostic |
+| Cell 1-7 Voltage | `sensor` | V (3 decimals), diagnostic, both transports |
 | Cell Imbalance | `sensor` | mV, diagnostic; max − min of Cell 1-7 Voltage (derived, both transports) |
 | AC Input / AC Output / DC Voltage, Fault Code | `sensor` | cloud only, see [Known gaps](#known-gaps) |
 
@@ -53,7 +52,8 @@ Entities are created only for fields the chosen transport can fill (`BLE_SENSORS
 `const.py` for Bluetooth; everything in `SENSORS` for cloud).
 
 The cloud server reports per-cell voltages too (`cell1_vol` ... `cell7_vol`, plus
-`cell_total_vol`); this is not a Bluetooth-only feature.
+`cell_total_vol`); this is not a Bluetooth-only feature. Both transports publish
+them in volts (Bluetooth: millivolts from the wire / 1000; cloud: `cellN_vol` / 1000).
 
 From these values the integration computes a **Cell Imbalance** sensor: the spread
 between the highest and lowest cell voltage in mV. It works over both Bluetooth and
@@ -76,6 +76,28 @@ services:
       - ./config:/config
       - /path/to/ugreen-powerroam/custom_components/ugreen_powerroam:/config/custom_components/ugreen_powerroam:ro
 ```
+
+**Bluetooth in Docker.** The container needs the host's BlueZ over D-Bus. On the host:
+
+```bash
+sudo apt install -y bluez
+sudo systemctl enable --now bluetooth
+bluetoothctl list                      # the adapter must be listed
+bluetoothctl --timeout 30 scan on      # the unit shows up as "ugreen ..."
+```
+
+In the compose file (next to `network_mode: host`):
+
+```yaml
+    privileged: true                # or cap_add: [NET_ADMIN, NET_RAW]
+    volumes:
+      - /run/dbus:/run/dbus:ro
+```
+
+Then check **Settings, Devices & services, Bluetooth, Configure, Advertisement
+monitor**: the unit and its RSSI should be listed. Around -90 dBm connections are
+unreliable; move the adapter on a USB 2.0 extension cable away from USB 3.0 ports, or
+put an ESPHome Bluetooth Proxy near the unit.
 
 Update:
 
@@ -134,6 +156,29 @@ battery preserving mode off. `protocol.py` keeps the layouts apart and refuses t
 a write from a partial state. `0x16` replaces the whole state, so a write needs the
 current values of all eleven fields.
 
+### Both transports at once
+
+Add one Bluetooth entry and one cloud entry for the same unit; they coexist.
+
+- **Identity.** The Bluetooth entry's `unique_id`, device identifiers and entity ids
+  carry a `ble_` prefix (`ble_<serial or MAC>`); the cloud entry keeps the serial. HA
+  shows two devices, and entities of the second one get a `_2` suffix.
+- **Keep On watchdogs.** The three Keep On switches (AC Output, USB Output, Always On
+  Mode) share one state across both entries: switching one switches its twin, and only
+  one entry sends the corrective command. After a restart a switch is on if it was on
+  in either entry.
+- **Different speeds.** Bluetooth updates within about a second; the cloud entry
+  catches up with its telemetry cycle (up to ~30-45 s), so its switches can lag after
+  a change.
+- **Different sensor sets.** On a GS1200 Bluetooth creates 32 entities and cloud 36
+  (the cloud-only sensors are listed under Entities).
+- **Dropping the cloud.** Disable the cloud entry in HA to stop its entities. The
+  unit's own connection to the vendor cloud stays until you block it at the router
+  (see Transports).
+- **Upgrading.** Bluetooth entries created before this change used the bare serial or
+  MAC as identity; remove and re-add them (history of the old entry is not carried
+  over).
+
 ## Cloud behaviour worth knowing
 
 **Update cadence.** Measured on one unit over ~15 minutes (199 frames, 2026-09-29):
@@ -163,10 +208,8 @@ timing, `usb_sw` / `work_mode` / switch transitions and raw frames.
 
 ## Known gaps
 
-- **Cell voltages over cloud.** Entities `cell_voltage_1..7` are created on both
-  transports, but the cloud frame names the fields `cell{n}_vol` while BLE decoding
-  produces `cell_voltage_{n}`. Check that the cloud path maps them in your build;
-  `const.py` still labels these sensors as BLE-only.
+- **Cloud switches lag.** Changes made over Bluetooth or on the unit reach the cloud
+  entry only with the next telemetry cycle.
 - **AC/DC voltage sensors and Fault Code.** Upstream measurements on a 1200W gave
   `0.0` / empty for `ac_in_vol`, `dc_vol` and `device_fault2` on both transports
   (`ac_vol` is present in the sample frame). Not re-verified in this fork. Do not read

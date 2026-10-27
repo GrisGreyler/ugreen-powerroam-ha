@@ -219,8 +219,8 @@ BLE_SENSORS = {
     *(f"cell_voltage_{n}" for n in range(1, 8)),
 }
 
-# Per-cell voltages have no cloud equivalent - the WebSocket never reports them.
-# They are one of the things local Bluetooth buys you.
+# Per-cell voltages were first thought to be Bluetooth-only; the cloud reports them
+# too (cellN_vol, converted to volts in api.py), so this set is informational.
 BLE_ONLY_SENSORS = {f"cell_voltage_{n}" for n in range(1, 8)}
 
 # Raw values for these keys come from the API in minutes. native stays in
