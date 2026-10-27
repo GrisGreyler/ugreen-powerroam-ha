@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -43,16 +44,23 @@ jobs:
                 tests/*.py
           git diff --quiet && { echo "Aider made no changes"; exit 1; }
 
-      - name: Commit and Push changes
+      - name: Commit to a branch and open a PR
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config --global user.name "Gemini Bot"
           git config --global user.email "gemini-bot@github.com"
-          git add .
+          git add custom_components tests
           if git diff --staged --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "Auto-fix by Gemini: $ISSUE_TITLE"
-            git push
+            exit 0
           fi
+          BRANCH="gemini/issue-${ISSUE_NUMBER}-${GITHUB_RUN_ID}"
+          git checkout -b "$BRANCH"
+          git commit -m "Auto-fix by Gemini: $ISSUE_TITLE"
+          git push -u origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "Auto-fix by Gemini: $ISSUE_TITLE" \
+            --body "Generated for #${ISSUE_NUMBER}. Review the diff before merging."
