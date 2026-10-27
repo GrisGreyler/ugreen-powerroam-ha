@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -35,21 +36,38 @@ CONFIRM_TIMEOUT = 45  # telemetry ~15 s plus the hub's 15 s change debounce
 MAX_ATTEMPTS = 5
 
 
+class KeepShared:
+    """State shared by every KeepState of one station (cloud + Bluetooth)."""
+
+    def __init__(self) -> None:
+        self.enabled: set[str] = set()
+        self.listeners: list[Callable[[], None]] = []
+        self.instances: list[KeepState] = []
+        self.enforcing: set[str] = set()
+        self.last_done: dict[str, tuple[object, float]] = {}
+
+
 class KeepState:
-    def __init__(self, hass: HomeAssistant, hub, api) -> None:
+    def __init__(
+        self, hass: HomeAssistant, hub, api, shared: KeepShared | None = None
+    ) -> None:
         self._hass = hass
         self._hub = hub
         self._api = api
-        self._enabled: set[str] = set()
+        self._shared = shared or KeepShared()
+        self._enabled = self._shared.enabled
+        self._listeners = self._shared.listeners
         self._tasks: dict[str, asyncio.Task] = {}
         self._gave_up: set[str] = set()
-        self._listeners: list[Callable[[], None]] = []
         self._unsub: Callable[[], None] | None = None
 
     def start(self) -> None:
+        self._shared.instances.append(self)
         self._unsub = self._hub.add_listener(self._on_update)
 
     async def stop(self) -> None:
+        if self in self._shared.instances:
+            self._shared.instances.remove(self)
         if self._unsub:
             self._unsub()
             self._unsub = None
@@ -66,16 +84,20 @@ class KeepState:
     def set_enabled(self, key: str, value: bool) -> None:
         if value == (key in self._enabled):
             return
-        self._gave_up.discard(key)
         if value:
             self._enabled.add(key)
         else:
             self._enabled.discard(key)
-            self._cancel(key)
+        instances = list(self._shared.instances) or [self]
+        for inst in instances:
+            inst._gave_up.discard(key)
+            if not value:
+                inst._cancel(key)
         for cb in list(self._listeners):
             cb()
         if value:
-            self._check(key)
+            for inst in instances:
+                inst._check(key)
 
     def _mismatch(self, key: str) -> bool:
         if not self._hub.available:
@@ -101,11 +123,28 @@ class KeepState:
         task = self._tasks.get(key)
         if task is None or task.done():
             self._tasks[key] = self._hass.async_create_background_task(
-                self._enforce(key), f"ugreen_powerroam keep {key}"
+                self._enforce_once(key), f"ugreen_powerroam keep {key}"
             )
 
     def _still_needed(self, key: str) -> bool:
         return key in self._enabled and self._mismatch(key)
+
+    async def _enforce_once(self, key: str) -> None:
+        """Let only one entry at a time fix a key on the shared station."""
+        shared = self._shared
+        owner, when = shared.last_done.get(key, (None, 0.0))
+        if key in shared.enforcing or (
+            owner is not None
+            and owner is not self
+            and time.monotonic() - when < CONFIRM_TIMEOUT
+        ):
+            return
+        shared.enforcing.add(key)
+        try:
+            await self._enforce(key)
+        finally:
+            shared.enforcing.discard(key)
+            shared.last_done[key] = (self, time.monotonic())
 
     async def _enforce(self, key: str) -> None:
         want = KEEP_TARGETS[key][1]

@@ -99,8 +99,11 @@ class UgreenKeepSwitch(SwitchEntity, RestoreEntity):
 
     async def async_added_to_hass(self) -> None:
         self._remove_listener = self._keep.add_listener(self.async_write_ha_state)
-        if (last := await self.async_get_last_state()) is not None:
-            self._keep.set_enabled(self._key, last.state == "on")
+        # Only ever turn on here: the state is shared between the cloud and
+        # Bluetooth entries, so a stale "off" must not undo the other's "on".
+        last = await self.async_get_last_state()
+        if last is not None and last.state == "on":
+            self._keep.set_enabled(self._key, True)
 
     async def async_will_remove_from_hass(self) -> None:
         self._remove_listener()

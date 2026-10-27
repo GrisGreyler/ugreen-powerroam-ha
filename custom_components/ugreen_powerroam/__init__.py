@@ -29,7 +29,7 @@ from .const import (
     TRANSPORT_BLE,
     TRANSPORT_CLOUD,
 )
-from .keep_state import KeepState
+from .keep_state import KeepShared, KeepState
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
@@ -52,7 +52,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await hub.start()
         data = {"api": api, "hub": hub, "transport": TRANSPORT_CLOUD}
 
-    keep = KeepState(hass, data["hub"], data["api"])
+    shared = hass.data.setdefault(f"{DOMAIN}_keep_shared", KeepShared())
+    keep = KeepState(hass, data["hub"], data["api"], shared)
     keep.start()
     data["keep"] = keep
 
