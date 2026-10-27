@@ -93,7 +93,7 @@ class UgreenBleDevice:
         # Fixed at setup from the config entry, never from a serial learned
         # later on the wire: if this moved, every entity would be re-registered
         # under a new id after a restart and lose its history.
-        self._unique_id_base = sn or address
+        self._unique_id_base = f"ble_{sn or address}"
 
         self.data: dict = {}
         self._switch_state: dict[str, int | bool] | None = None

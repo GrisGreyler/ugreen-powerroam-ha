@@ -60,7 +60,7 @@ class UgreenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_bluetooth(self, discovery_info: BluetoothServiceInfoBleak):
         """Handle a PowerRoam spotted by Home Assistant's Bluetooth stack."""
-        await self.async_set_unique_id(discovery_info.address)
+        await self.async_set_unique_id(f"ble_{discovery_info.address}")
         self._abort_if_unique_id_configured()
 
         self._address = discovery_info.address
@@ -104,7 +104,7 @@ class UgreenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._address = user_input[CONF_ADDRESS]
             self._name = self._discovered.get(self._address, self._address)
-            await self.async_set_unique_id(self._address, raise_on_progress=False)
+            await self.async_set_unique_id(f"ble_{self._address}", raise_on_progress=False)
             self._abort_if_unique_id_configured()
             return await self.async_step_bluetooth_confirm()
 
@@ -154,9 +154,8 @@ class UgreenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception as err:  # never block setup on an optional lookup
             _LOGGER.debug("Could not read PowerRoam serial over BLE: %s", err)
 
-        if serial:
-            await self.async_set_unique_id(serial, raise_on_progress=False)
-            self._abort_if_unique_id_configured()
+        await self.async_set_unique_id(f"ble_{self._address}", raise_on_progress=False)
+        self._abort_if_unique_id_configured()
 
         return self.async_create_entry(
             title=f"UGREEN PowerRoam ({self._name or self._address})",
